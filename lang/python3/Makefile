@@ -67,7 +67,7 @@ endef
 
 define Package/python3
 $(call Package/python3/Default)
-  DEPENDS:=+python3-base +libncursesw +libbz2 +libgdbm +libsqlite3 +libdb47
+  DEPENDS:=+python3-base +libncursesw +libbz2 +libgdbm +libsqlite3 +libdb47 +liblzma
 endef
 
 define Package/python3/description
