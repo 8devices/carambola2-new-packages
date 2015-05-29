@@ -8,13 +8,13 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=ocserv
-PKG_VERSION:=0.9.2
+PKG_VERSION:=0.10.5
 PKG_RELEASE:=1
 
 PKG_BUILD_DIR :=$(BUILD_DIR)/$(PKG_NAME)-$(PKG_VERSION)
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.xz
-PKG_SOURCE_URL :=ftp://ftp.infradead.org/pub/ocserv/
-PKG_MD5SUM:=9697c37cc81b30be2b178258ee595d97
+PKG_SOURCE_URL:=ftp://ftp.infradead.org/pub/ocserv/
+PKG_MD5SUM:=17ee861f352d6ef7cd33114819b215ba
 
 PKG_LICENSE:=GPLv2
 PKG_LICENSE_FILES:=COPYING
@@ -38,7 +38,7 @@ define Package/ocserv
   TITLE:=OpenConnect VPN server
   URL:=http://www.infradead.org/ocserv/
   MAINTAINER:=Nikos Mavrogiannopoulos <n.mavrogiannopoulos@gmail.com>
-  DEPENDS:= +OCSERV_HTTP_PARSER:libhttp-parser +OCSERV_SECCOMP:libseccomp +libgnutls +certtool +libncurses +libreadline +OCSERV_PAM:libpam +OCSERV_PROTOBUF:libprotobuf-c +kmod-tun
+  DEPENDS:= +OCSERV_RADIUS:freeradius-client +OCSERV_HTTP_PARSER:libhttp-parser +OCSERV_SECCOMP:libseccomp +libgnutls +certtool +libncurses +libreadline +OCSERV_PAM:libpam +OCSERV_PROTOBUF:libprotobuf-c +kmod-tun
   USERID:=ocserv=72:ocserv=72
 endef
 
@@ -58,9 +58,15 @@ CONFIGURE_ARGS+= \
 	--enable-local-libopts \
 	--with-libreadline-prefix="$(STAGING_DIR)/" \
 	--without-libnl \
+	--without-gssapi \
+	--with-libcrypt-prefix="$(STAGING_DIR)/" \
 
 ifneq ($(CONFIG_OCSERV_PAM),y)
 CONFIGURE_ARGS += --without-pam
+endif
+
+ifneq ($(CONFIG_OCSERV_RADIUS),y)
+CONFIGURE_ARGS += --without-radius
 endif
 
 ifneq ($(CONFIG_OCSERV_SECCOMP),y)

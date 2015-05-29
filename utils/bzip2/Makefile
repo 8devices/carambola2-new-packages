@@ -9,7 +9,7 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=bzip2
 PKG_VERSION:=1.0.6
-PKG_RELEASE:=1
+PKG_RELEASE:=2
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_URL:=http://www.bzip.org/$(PKG_VERSION)
@@ -21,12 +21,17 @@ PKG_LICENSE_FILES:=LICENSE
 
 include $(INCLUDE_DIR)/package.mk
 
+define Package/bzip2/Default
+  SUBMENU:=Compression
+  URL:=http://www.bzip.org/
+endef
+
 define Package/libbz2
+$(call Package/bzip2/Default)
   SECTION:=libs
   CATEGORY:=Libraries
   DEPENDS:=
   TITLE:=bzip2 library.
-  URL:=http://www.bzip.org/
 endef
 
 define Package/libbz2/description
@@ -35,11 +40,11 @@ define Package/libbz2/description
 endef
 
 define Package/bzip2
+$(call Package/bzip2/Default)
   SECTION:=utils
   CATEGORY:=Utilities
   DEPENDS:=+libbz2
   TITLE:=bzip2 is a compression utility.
-  URL:=http://www.bzip.org/
 endef
 
 define Package/bzip2/description
@@ -47,13 +52,15 @@ define Package/bzip2/description
 	data compressor. This package provides the binary.
 endef
 
-TARGET_CFLAGS += $(FPIC)
+TARGET_CFLAGS += \
+	$(FPIC) \
+	$(TARGET_LDFLAGS)
+
 CONFIGURE_ARGS += --prefix=/usr
 
 MAKE_FLAGS += \
 	-f Makefile-libbz2_so \
 	CFLAGS="$(TARGET_CFLAGS)" \
-	LDFLAGS="$(TARGET_LDLAGS)" \
 	all
 
 define Build/InstallDev

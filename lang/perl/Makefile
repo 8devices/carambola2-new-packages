@@ -9,7 +9,7 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=perl
 PKG_VERSION:=5.20.2
-PKG_RELEASE:=1
+PKG_RELEASE:=2
 
 PKG_SOURCE_URL:=ftp://ftp.cpan.org/pub/CPAN/src/5.0 \
 		http://www.cpan.org/src/5.0/perl-5.20.0.tar.gz \
@@ -36,7 +36,7 @@ HOST_BUILD_PARALLEL:=1
 
 # Variables used during configuration/build
 HOST_PERL_PREFIX:=$(STAGING_DIR_HOST)/usr
-ifneq ($(CONFIG_USE_EGLIBC),)
+ifneq ($(CONFIG_USE_GLIBC),)
 	EXTRA_LIBS:=bsd
 	EXTRA_LIBDIRS:=$(STAGING_DIR)/lib
 endif
@@ -50,7 +50,7 @@ ifdef CONFIG_PERL_THREADS
 	PERL_CONFIG_SUFFIX:=-mt
 
 	# uclibc doesn't provide crypt_r(). Enable crypt() usage for glibc builds only
-	ifdef CONFIG_USE_EGLIBC
+	ifdef CONFIG_USE_GLIBC
 		CRYPT_R_PROTO:=REENTRANT_PROTO_B_CCS
 		CRYPT:=define
 	else
@@ -79,7 +79,7 @@ define Package/perl
   CATEGORY:=Languages
   TITLE:=The Perl intepreter
   URL:=http://www.perl.com/
-  DEPENDS:=+USE_EGLIBC:libbsd +PERL_THREADS:libpthread
+  DEPENDS:=+USE_GLIBC:libbsd +PERL_THREADS:libpthread
 endef
 
 define Package/perl/description
@@ -94,7 +94,7 @@ endef
 
 # Static host perl
 define Host/Configure
-	( cd $(HOST_BUILD_DIR); ./Configure -der -Uusedl -Duserelocatableinc -Dprefix=$(HOST_PERL_PREFIX) )
+	( cd $(HOST_BUILD_DIR); ./Configure -der -Uusedl -Duserelocatableinc -Dprefix=$(HOST_PERL_PREFIX) $(if $(CONFIG_PERL_THREADS),-Dusethreads,))
 endef
 
 define Host/Install

@@ -8,17 +8,15 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=ntp
-PKG_VERSION:=4.2.8p1
-PKG_RELEASE:=1
+PKG_VERSION:=4.2.8p2
+PKG_RELEASE:=2
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_URL:=http://www.eecis.udel.edu/~ntp/ntp_spool/ntp4/ntp-4.2/
-PKG_MD5SUM:=65d8cdfae4722226fbe29863477641ed
+PKG_MD5SUM:=fa37049383316322d060ec9061ac23a9
 
 PKG_LICENSE:=Unique
 PKG_LICENSE_FILES:=COPYRIGHT html/copyright.html
-
-PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-$(PKG_VERSION)
 
 PKG_FIXUP:=autoreconf
 PKG_LIBTOOL_PATHS:=. sntp
@@ -105,6 +103,7 @@ CONFIGURE_ARGS += \
 	--enable-NMEA \
 	--enable-LOCAL-CLOCK \
 	--enable-SHM \
+	--enable-ATOM \
 	--enable-linuxcaps \
 	--with-yielding-select=yes \
 	--with-crypto \
