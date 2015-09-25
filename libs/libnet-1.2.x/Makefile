@@ -9,12 +9,13 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=libnet
 PKG_VERSION:=1.2-rc3
-PKG_RELEASE:=1
+PKG_RELEASE:=3
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_URL:=http://sourceforge.net/projects/libnet-dev/files/
 PKG_MD5SUM:=f051e6e5bdecddb90f77c701c2ca1804
 PKG_MAINTAINER:=Mislav Novakovic <mislav.novakovic@sartura.hr>
+PKG_LICENSE:=GPL-2.0
 
 PKG_FIXUP:=autoreconf
 PKG_INSTALL:=1

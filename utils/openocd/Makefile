@@ -8,7 +8,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=openocd
-PKG_VERSION:=v0.9.0-rc1
+PKG_VERSION:=v0.9.0
 PKG_RELEASE:=1
 
 PKG_SOURCE_PROTO:=git
@@ -26,6 +26,7 @@ PKG_INSTALL:=1
 PKG_FIXUP:=autoreconf
 
 include $(INCLUDE_DIR)/package.mk
+include $(INCLUDE_DIR)/nls.mk
 
 define Package/openocd
   SECTION:=utils
@@ -56,6 +57,7 @@ endef
 CONFIGURE_ARGS += \
 	--prefix="/usr" \
 	--disable-werror \
+	MAKEINFO=true \
 	--enable-dummy \
 	--enable-sysfsgpio \
 	--enable-usb_blaster_libftdi \

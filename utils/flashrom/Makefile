@@ -9,7 +9,7 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=flashrom
 PKG_VERSION:=0.9.8
-PKG_RELEASE:=2
+PKG_RELEASE:=3
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.bz2
 PKG_SOURCE_URL:=http://download.flashrom.org/releases
@@ -45,6 +45,8 @@ define Package/flashrom/description
  and erasing flash chips. It's often used to flash BIOS/EFI/coreboot
  /firmware images.
 endef
+
+TARGET_CFLAGS+=-std=gnu89
 
 MAKE_FLAGS += \
 	PREFIX="/usr"
