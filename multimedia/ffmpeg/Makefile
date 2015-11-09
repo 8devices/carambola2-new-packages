@@ -364,7 +364,6 @@ FFMPEG_CONFIGURE:= \
 	--enable-small \
 	--enable-pthreads \
 	--enable-zlib \
-	--disable-lzma \
 	--disable-runtime-cpudetect \
 	--disable-doc \
 	--disable-debug \
