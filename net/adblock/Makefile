@@ -7,7 +7,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=adblock
-PKG_VERSION:=0.11.0
+PKG_VERSION:=0.22.2
 PKG_RELEASE:=1
 PKG_LICENSE:=GPL-3.0+
 PKG_MAINTAINER:=Dirk Brenken <dirk@brenken.org>
@@ -17,15 +17,16 @@ include $(INCLUDE_DIR)/package.mk
 define Package/$(PKG_NAME)
 	SECTION:=net
 	CATEGORY:=Network
-	TITLE:=powerful adblock script to block ad/abuse domains
+	TITLE:=Powerful adblock script to block ad/abuse domains
 	DEPENDS:=+curl +wget
 	PKGARCH:=all
 endef
 
 define Package/$(PKG_NAME)/description
-powerful adblock script to block ad/abuse domains
-When the dns server on your router receives dns requests, we will sort out queries that ask for the [A] resource records of ad servers
-and return the local ip address of your router and the internal web server delivers a transparent pixel instead.
+Powerful adblock script to block ad/abuse domains
+When the dns server on your router receives dns requests, we will sort out queries that ask for the [A]
+resource records of ad servers and return the local ip address of your router and the internal web server
+delivers a transparent pixel instead.
 The script supports the following domain blacklist sites:
   http://pgl.yoyo.org/adservers
   http://malwaredomains.com
@@ -37,10 +38,12 @@ The script supports the following domain blacklist sites:
   http://www.spam404.com
   http://winhelp2002.mvps.org
 
+Please read README.md in /etc/adblock for further information.
+
 endef
 
 define Package/$(PKG_NAME)/conffiles
-/etc/adblock/adblock.conf
+/etc/config/adblock
 /etc/adblock/adblock.whitelist
 /etc/adblock/adblock.blacklist
 endef
@@ -56,15 +59,19 @@ endef
 
 define Package/$(PKG_NAME)/install
 	$(INSTALL_DIR) $(1)/usr/bin
-	$(INSTALL_BIN) ./files/usr/bin/adblock-update.sh $(1)/usr/bin/
-	$(INSTALL_DATA) ./files/usr/bin/adblock-helper.sh $(1)/usr/bin/
+	$(INSTALL_BIN) ./files/adblock-update.sh $(1)/usr/bin/
+	$(INSTALL_DATA) ./files/adblock-helper.sh $(1)/usr/bin/
+
+	$(INSTALL_DIR) $(1)/etc/config
+	$(INSTALL_CONF) ./files/adblock.conf $(1)/etc/config/adblock
 
 	$(INSTALL_DIR) $(1)/etc/adblock
-	$(INSTALL_CONF) ./files/etc/adblock/adblock.* $(1)/etc/adblock/
-	$(INSTALL_CONF) ./files/etc/adblock/README.md $(1)/etc/adblock/
+	$(INSTALL_CONF) ./files/adblock.blacklist $(1)/etc/adblock/
+	$(INSTALL_CONF) ./files/adblock.whitelist $(1)/etc/adblock/
+	$(INSTALL_CONF) ./files/README.md $(1)/etc/adblock/
 
 	$(INSTALL_DIR) $(1)/etc/adblock/samples
-	$(INSTALL_CONF) ./files/etc/adblock/samples/*.sample $(1)/etc/adblock/samples/
+	$(INSTALL_CONF) ./files/samples/*.sample $(1)/etc/adblock/samples/
 
 	$(INSTALL_DIR) $(1)/www/adblock
 	$(INSTALL_DATA) ./files/www/adblock/* $(1)/www/adblock/
