@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2015 OpenWrt.org
+# Copyright (C) 2016 OpenWrt.org
 #
 # This is free software, licensed under the GNU General Public License v2.
 # See /LICENSE for more information.
@@ -8,12 +8,12 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=perl-cgi
-PKG_VERSION:=4.22
+PKG_VERSION:=4.28
 PKG_RELEASE:=1
 
 PKG_SOURCE_URL:=http://www.cpan.org/authors/id/L/LE/LEEJO
 PKG_SOURCE:=CGI-$(PKG_VERSION).tar.gz
-PKG_MD5SUM:=8289aa6f2cba9589134d517f4a25da9e
+PKG_MD5SUM:=28efb391377f6e98c19c23292d5fcc8c
 
 PKG_LICENSE:=GPL Artistic-2.0
 PKG_MAINTAINER:=Marcel Denia <naoir@gmx.net>
@@ -41,7 +41,7 @@ define Build/Compile
 endef
 
 define Package/perl-cgi/install
-        $(call perlmod/Install,$(1),CGI auto/CGI)
+        $(call perlmod/Install,$(1),CGI CGI.pm auto/CGI)
 endef
 
 

@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2006-2015 OpenWrt.org
+# Copyright (C) 2006-2016 OpenWrt.org
 #
 # This is free software, licensed under the GNU General Public License v2.
 # See /LICENSE for more information.
@@ -9,7 +9,7 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=sane-backends
 PKG_VERSION:=1.0.25
-PKG_RELEASE:=1
+PKG_RELEASE:=2
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_URL:=http://fossies.org/linux/misc \
     https://alioth.debian.org/frs/download.php/file/4146/
@@ -59,7 +59,7 @@ define Package/sane-backends/config
       depends on PACKAGE_sane-backends
       prompt "Include all SANE backends (sane-backends-all)"
 
-    comment "Modules"
+    comment "Backends"
 
 $(foreach backend,$(SANE_BACKENDS), \
     $(eval \
@@ -115,7 +115,7 @@ $(call Package/sane-backends/Default)
   HIDDEN:=1
 endef
 
-define Package/sane-backends/description
+define Package/sane-backends-all/description
 $(call Package/sane-backends/Default/description)
 .
 Metapackage for selecting all SANE Backends
@@ -203,6 +203,7 @@ endef
 
 define Package/sane-daemon/conffiles
 /etc/sane.d/saned.conf
+/etc/xinetd.d/sane-port
 endef
 
 define Package/sane-frontends/install

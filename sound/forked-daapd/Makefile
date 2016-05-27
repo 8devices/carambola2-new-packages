@@ -8,9 +8,9 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=forked-daapd
-PKG_VERSION:=23.2
-PKG_RELEASE:=20150622
-PKG_REV:=227017ef5ba8df921b2f1db681a46494ec296b8b
+PKG_VERSION:=24.1
+PKG_RELEASE:=1
+PKG_REV:=524d060b7a9a68ab4375460d2da611a80e4fc18b
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.bz2
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
@@ -28,6 +28,7 @@ PKG_LICENSE:=GPL-2.0
 PKG_LICENSE_FILES:=COPYING
 
 include $(INCLUDE_DIR)/package.mk
+include $(INCLUDE_DIR)/nls.mk
 
 define Package/forked-daapd
 SECTION:=sound
@@ -36,14 +37,15 @@ TITLE:=iTunes (DAAP) server for Apple Remote and AirPlay
 URL:=https://github.com/ejurgensen/forked-daapd
 DEPENDS:=+libgpg-error +libgcrypt +libgdbm +zlib +libexpat +libunistring \
 	+libevent2 +libdaemon +libantlr3c +confuse +alsa-lib +libffmpeg-full \
-	+mxml +libavahi-client +sqlite3-cli +libplist +libcurl
+	+mxml +libavahi-client +sqlite3-cli +libplist +libcurl +libjson-c \
+	+libprotobuf-c +libgnutls $(ICONV_DEPENDS)
 endef
 
 define Package/forked-daapd/description
   forked-daapd is a Linux/FreeBSD DAAP (iTunes), MPD (Music Player Daemon) and
-  RSP (Roku) media server. It has support for AirPlay devices/speakers, Apple
-  Remote (and compatibles), MPD clients, internet radio and LastFM. It does not
-  support AirPlay video.
+  RSP (Roku) media server. It has support for AirPlay speakers, Chromecast,
+  Apple Remote (and compatibles), MPD clients, internet radio and LastFM. It
+  does not support AirPlay/Chromecast video.
 endef
 
 define Package/forked-daapd/conffiles
@@ -53,7 +55,8 @@ endef
 CONFIGURE_ARGS += \
 	--enable-itunes \
 	--enable-lastfm \
-	--enable-mpd
+	--enable-mpd \
+	--enable-chromecast
 
 TARGET_CFLAGS += $(FPIC)
 TARGET_LDFLAGS += -Wl,-rpath-link,$(STAGING_DIR)/usr/lib

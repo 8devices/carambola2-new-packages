@@ -8,13 +8,13 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=znc
-PKG_VERSION:=1.6.1
+PKG_VERSION:=1.6.2
 PKG_RELEASE:=1
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_URL:=http://znc.in/releases \
 		http://znc.in/releases/archive
-PKG_MD5SUM:=8e29289e6229b6d2473de202170745ab
+PKG_MD5SUM:=89f6696ed366661f7432ece343fd19d0
 
 PKG_MAINTAINER:=Jonas Gorski <jogo@openwrt.org>
 PKG_LICENSE:=Apache-2.0
@@ -81,7 +81,7 @@ define module
 	# include webadmin page templates if existing
 	if [ -d $$(PKG_BUILD_DIR)/modules/data/$(subst -,_,$(strip $(1))) ]; then \
 		$(INSTALL_DIR) $$(1)/usr/share/znc/modules ;\
-		$(CP) -r $$(PKG_BUILD_DIR)/modules/data/$(subst -,_,$(strip $(1))) $$(1)/usr/share/znc/modules ;\
+		$(CP) $$(PKG_BUILD_DIR)/modules/data/$(subst -,_,$(strip $(1))) $$(1)/usr/share/znc/modules ;\
 	fi
   endef
 
@@ -104,9 +104,9 @@ define webadmin
 	$(INSTALL_DIR) $$(1)/usr/lib/znc/
 	$(INSTALL_BIN) $$(PKG_BUILD_DIR)/modules/webadmin.so $$(1)/usr/lib/znc/
 	$(INSTALL_DIR) $$(1)/usr/share/znc/modules
-	$(CP) -r $$(PKG_BUILD_DIR)/modules/data/webadmin $$(1)/usr/share/znc/modules
+	$(CP) $$(PKG_BUILD_DIR)/modules/data/webadmin $$(1)/usr/share/znc/modules
 	$(INSTALL_DIR) $$(1)/usr/share/znc/webskins/
-	$(CP) -r $$(PKG_BUILD_DIR)/webskins/_default_ $$(1)/usr/share/znc/webskins/
+	$(CP) $$(PKG_BUILD_DIR)/webskins/_default_ $$(1)/usr/share/znc/webskins/
   endef
 
   ZNC_MODULES += znc-mod-webadmin
@@ -126,7 +126,7 @@ define webskin
 
   define Package/znc-webskin-$(strip $(1))/install
 	$(INSTALL_DIR) $$(1)/usr/share/znc/webskins/
-	$(CP) -r $$(PKG_BUILD_DIR)/webskins/$(strip $(1)) $$(1)/usr/share/znc/webskins/
+	$(CP) $$(PKG_BUILD_DIR)/webskins/$(strip $(1)) $$(1)/usr/share/znc/webskins/
   endef
   ZNC_MODULES += znc-webskin-$(strip $(1))
 endef
@@ -277,8 +277,18 @@ CONFIGURE_VARS += \
 	LIBS="-lstdc++ -lm -lssl -lcrypto $(LIBGCC_S) -lc"
 
 CONFIGURE_ARGS += \
-	--disable-c-ares \
-	--disable-perl
+	--disable-charset \
+	--disable-cyrus \
+	--disable-debug \
+	--enable-largefile \
+	--disable-perl \
+	--enable-poll \
+	--disable-python \
+	--enable-ssl \
+	--disable-swig \
+	--disable-tcl \
+	--enable-tdns \
+	--enable-zlib
 
 define Build/Configure
 	$(call Build/Configure/Default,)

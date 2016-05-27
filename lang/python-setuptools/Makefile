@@ -1,21 +1,21 @@
 #
-# Copyright (C) 2014 OpenWrt.org
+# Copyright (C) 2014-2016 OpenWrt.org
 #
 # This is free software, licensed under the GNU General Public License v2.
 # See /LICENSE for more information.
-# 
+#
 
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=python-setuptools
-PKG_VERSION:=18.7
+PKG_VERSION:=20.7.0
 PKG_RELEASE:=1
 
 PKG_SOURCE:=setuptools-$(PKG_VERSION).tar.gz
 PKG_SOURCE_URL:=https://pypi.python.org/packages/source/s/setuptools/
-PKG_MD5SUM:=295d7aaef2da7d6ff10b522581da0cf9
+PKG_MD5SUM:=5d12b39bf3e75e80fdce54e44b255615
 
-HOST_BUILD_DEPENDS:=python/host
+HOST_BUILD_DEPENDS:=python python/host
 
 PKG_BUILD_DIR:=$(BUILD_DIR)/setuptools-$(PKG_VERSION)
 HOST_BUILD_DIR:=$(BUILD_DIR_HOST)/setuptools-$(PKG_VERSION)
@@ -60,7 +60,7 @@ endef
 
 define Host/Compile
 	$(call Build/Compile/HostPyMod,,\
-		install --root="$(STAGING_DIR_HOST)" --prefix="" \
+		install --root="$(STAGING_DIR)/host" --prefix="" \
 		--single-version-externally-managed \
 	)
 endef

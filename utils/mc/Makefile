@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2006-2015 OpenWrt.org
+# Copyright (C) 2006-2016 OpenWrt.org
 #
 # This is free software, licensed under the GNU General Public License v2.
 # See /LICENSE for more information.
@@ -8,16 +8,16 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=mc
-PKG_VERSION:=4.8.15
-PKG_RELEASE:=2
-PKG_MAINTAINER:=Dirk Brenken <dirk@brenken.org>
+PKG_VERSION:=4.8.17
+PKG_RELEASE:=3
+PKG_MAINTAINER:=Dirk Brenken <dev@brenken.org>
 PKG_LICENSE:=GPL-3.0+
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.xz
 PKG_SOURCE_URL:=http://ftp.midnight-commander.org/
-PKG_MD5SUM:=7c1935433866fdf59a3c2d9b7dae81ad
+PKG_SHA256SUM:=0447bdddc0baa81866e66f50f9a545d29d6eebb68b0ab46c98d8fddd2bf4e44d
 PKG_BUILD_PARALLEL:=1
-PKG_FIXUP:=autoreconf
+PKG_FIXUP:=autoreconf gettext-version
 
 PKG_CONFIG_DEPENDS := \
 	CONFIG_PACKAGE_MC \
@@ -46,11 +46,10 @@ define Package/$(PKG_NAME)/config
 endef
 
 define Package/$(PKG_NAME)/description
-GNU Midnight Commander is a visual file manager,
-licensed under GNU General Public License and therefore qualifies as Free Software.
+GNU Midnight Commander is a visual file manager.
 It's a feature rich full-screen text mode application that allows you to copy,
-move and delete files and whole directory trees, search for files
-and run commands in the subshell. Internal viewer and editor are included.
+move and delete files and whole directory trees, search for files and run commands in the subshell.
+Internal viewer and editor are included as well.
 
 endef
 
@@ -105,8 +104,8 @@ define Package/$(PKG_NAME)/install
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/src/mc $(1)/usr/bin
 	$(INSTALL_DIR) $(1)/etc/mc
 	$(INSTALL_DATA) $(PKG_BUILD_DIR)/misc/mc.charsets $(1)/etc/mc
-	$(INSTALL_DATA) $(PKG_BUILD_DIR)/misc/mc.keymap $(1)/etc/mc	
-	$(INSTALL_DATA) $(PKG_BUILD_DIR)/misc/mc.ext $(1)/etc/mc	
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/misc/mc.default.keymap $(1)/etc/mc
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/misc/mc.ext $(1)/etc/mc
 ifeq ($(CONFIG_MC_DIFFVIEWER),y)
 	ln -sf mc $(1)/usr/bin/mcdiff
 endif

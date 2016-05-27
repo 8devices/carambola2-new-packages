@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2008-2015 OpenWrt.org
+# Copyright (C) 2008-2016 OpenWrt.org
 #
 # This is free software, licensed under the GNU General Public License v2.
 # See /LICENSE for more information.
@@ -11,12 +11,12 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=knxd
-PKG_VERSION=2015-07-19-$(PKG_SOURCE_VERSION)
+PKG_VERSION=2016-03-12
 PKG_RELEASE:=1
 
 PKG_SOURCE_PROTO:=git
 PKG_SOURCE_URL:=https://github.com/knxd/knxd.git
-PKG_SOURCE_VERSION:=be1fcfe85cc1dfcc41f791cd9a45c57fe18da6a0
+PKG_SOURCE_VERSION:=c8a4bb3b042de1fd692a93cdb7a307546f2be359
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_SOURCE_VERSION).tar.gz
 

@@ -16,14 +16,14 @@ include $(INCLUDE_DIR)/nls.mk
 include $(INCLUDE_DIR)/target.mk 
 
 PKG_NAME:=boost
-PKG_VERSION:=1_59_0
-PKG_RELEASE:=6
+PKG_VERSION:=1_61_0
+PKG_RELEASE:=1
 
 PKG_SOURCE:=$(PKG_NAME)_$(PKG_VERSION).tar.gz
 PKG_SOURCE_URL:=@SF/boost
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)_$(PKG_VERSION)
 HOST_BUILD_DIR:=$(BUILD_DIR_HOST)/$(PKG_NAME)_$(PKG_VERSION)
-PKG_MD5SUM:=51528a0e3b33d9e10aaa311d9eb451e3
+PKG_MD5SUM:=874805ba2e2ee415b1877ef3297bf8ad
 PKG_LICENSE:=Boost Software License <http://www.boost.org/users/license.html>
 PKG_MAINTAINER:=Carlos M. Ferreira <carlosmf.pt@gmail.com>
 
@@ -48,9 +48,9 @@ define Package/boost/description/Default
 endef
 
 define Package/boost/description
-This package provides the Boost v1.59 libraries.
+This package provides the Boost v1.61 libraries.
 Boost is a set of free, peer-reviewed, portable C++ source libraries.
-This package provides the following libraries:
+This package provides the following run-time libraries:
  - atomic
  - chrono
  - container
@@ -63,7 +63,7 @@ This package provides the following libraries:
  - graph
  - - graph-parallel
  - iostreams
- - locale
+ - locale (requires kernel being compiled with full language support)
  - log
  - math
  - program_options
@@ -77,6 +77,8 @@ This package provides the following libraries:
  - thread
  - timer
  - wave
+ There are many more header-only libraries supported by Boost.
+ See more at http://www.boost.org/doc/libs/1_61_0/
 endef
 
 BOOST_LIBS =
@@ -115,31 +117,75 @@ define Package/boost/config
     menu "Select Boost Options"
       depends on PACKAGE_boost
       	comment "Boost compilation options."
-	    config boost-static-libs
-	    	bool "Compile Static Libraries"
-	    	help 
-	    		Compile static version of all selected boost libraries.
-	    	default y
 
-	    config boost-shared-libs
-	    	bool "Compile Shared Libraries"
-	    	help 
-	    		Compile shared version of all selected boost libraries.
-	    	default y
-	    
-	    config boost-runtime-static
-	    	bool "Use static version of C and C++ runtimes for static libraries."	    	
-	    	help 
-	    		Determines if shared or static version of C and C++ runtimes should be used for static libraries.
-	    	default n
-	    	select boost-static-libs
+      	choice
+      		prompt "Compile Boost libraries."
+      			default boost-static-and-shared-libs
+      			help
+      				Choose which version to compile.
+      				 -> Shared:
+      				    - Only Shared libs will be compiled.
+      				 -> Static:
+      				    - Only Static libs will be compiled.
+      				 -> Both:
+      				    - Both Static and Shared libs will be compiled.		    
 
-	    config boost-runtime-shared
-	    	bool "Use shared version of C and C++ runtimes for shared libraries."
-	    	help 
-	    		Determines if shared or static version of C and C++ runtimes should be used for shared libraries.
-	    	default y
-	    	select boost-shared-libs
+		    config boost-shared-libs
+		    	bool "Shared"
+			
+			config boost-static-libs
+		    	bool "Static"		    	
+			
+			config boost-static-and-shared-libs
+		    	bool "Both"		    	
+	    endchoice
+
+      	choice
+      		prompt "Selects Boost Runtime linkage."
+      		default boost-runtime-shared
+      		help
+      			Choose which C and C++ runtimes to use:
+      			 -> Use Shared runtimes.
+      			 -> Use Static runtimes.
+      			    - Not available if Shared libs are to be built.
+      			 -> Use both runtimes.
+      			    - Not available if Shared libs are to be built.
+      			    - Two separate versions of Boost are built, linking each to a different runtime. 
+      			    - This option requires "Use tagged names" option to be active.
+
+		    config boost-runtime-shared
+		    	bool "Shared"
+
+		    config boost-runtime-static
+		    	depends on @(!boost-shared-libs&&!boost-static-and-shared-libs)
+		    	bool "Static"		    	
+		    
+		    config boost-runtime-static-and-shared
+		    	depends on @(boost-use-name-tags&&!boost-shared-libs&&!boost-static-and-shared-libs)
+		    	bool "Both"
+	    endchoice
+
+      	choice
+      		prompt "Select a Variant."
+      		default boost-variant-release
+      		help
+      			Chooses which boost variant should be selected:
+      			-> Release: Optimizes Boost for release.
+      			   - Optimization: Speed;  Debug Symbols: Off; Inlining: Full; Runtime Debugging: Off.
+      			-> Debug: 
+      			   - Optimization: Off; Debug Symbols: On; Inlining: Off; Runtime Debugging: On.
+      			-> Profile:
+      			   - Profiling: On;  Debug Symbols: On.
+
+      		config boost-variant-release
+      			bool "Release"
+
+      		config boost-variant-debug
+      			bool "Debug"
+      				
+      		config boost-variant-profile
+      			bool "Profile"
+      	endchoice	    	
 
 	    config boost-use-name-tags
 	    	bool "Use tagged names."
@@ -153,16 +199,16 @@ define Package/boost/config
 
 	    config boost-single-thread
 	    	depends on @boost-use-name-tags
-	    	bool "Single thread Support"	    	
+	    	bool "Single thread Support."
 	    	help 
 	    		Compile Boost libraries in single-thread mode.
 	    	default n
-	    
-	    config boost-with-debug
+			    
+	    config boost-build-type-complete
 	    	depends on @boost-use-name-tags
-	    	bool "Boost Debug Support"	    	
+	    	bool "Complete Boost Build."
 	    	help 
-	    		Compile Boost libraries with debug support.
+	    		Builds both release and debug libs. It will take much longer to compile.
 	    	default n	    	
     endmenu
 
@@ -244,7 +290,7 @@ $(eval $(call DefineBoostLibrary,date_time,,))
 $(eval $(call DefineBoostLibrary,filesystem,system,))
 $(eval $(call DefineBoostLibrary,graph,regex,))
 $(eval $(call DefineBoostLibrary,iostreams,,+PACKAGE_boost-iostreams:zlib))
-$(eval $(call DefineBoostLibrary,locale,system,$(ICONV_DEPENDS) +@BUILD_NLS))
+$(eval $(call DefineBoostLibrary,locale,system,$(ICONV_DEPENDS) @BUILD_NLS))
 $(eval $(call DefineBoostLibrary,log,system chrono date_time thread filesystem regex,))
 $(eval $(call DefineBoostLibrary,math,,))
 #$(eval $(call DefineBoostLibrary,mpi,,)) # OpenMPI does no exist in OpenWRT at this time.
@@ -262,7 +308,7 @@ $(eval $(call DefineBoostLibrary,wave,date_time thread filesystem,))
 
 
 define Host/Compile
-	# bjam does not provide a configure-script nor a Makefile
+	# b2 does not provide a configure-script nor a Makefile
 	( cd $(HOST_BUILD_DIR)/tools/build/src/engine ; ./build.sh gcc )
 endef
 
@@ -287,11 +333,12 @@ else
     BOOST_ABI = sysv
 endif
 
+comma := ,
 
 define Build/Compile
 	$(info Selected Boost API $(BOOST_ABI) for architecture $(ARCH) and cpu $(CPU_TYPE) $(CPU_SUBTYPE))
 	( cd $(PKG_BUILD_DIR) ; \
-		echo "using gcc : $(ARCH) : $(GNU_TARGET_NAME)-gcc : <compileflags>\"$(TARGET_CFLAGS)\" <cxxflags>\"$(TARGET_CXXFLAGS)\" <linkflags>\"$(TARGET_LDFLAGS)\" ;" > tools/build/src/user-config.jam ; \
+		echo "using gcc : $(ARCH) : $(GNU_TARGET_NAME)-gcc : <compileflags>\"$(TARGET_CFLAGS)\" <cxxflags>\"$(TARGET_CXXFLAGS) $(if $(CONFIG_boost-coroutine2),-std=c++14,)\" <linkflags>\"$(TARGET_LDFLAGS)\" ;" > tools/build/src/user-config.jam ; \
 		$(if $(CONFIG_PACKAGE_boost-python3), \
 			echo "using python : 3.5 : $(STAGING_DIR_ROOT)/usr/bin/python3 : $(STAGING_DIR)/usr/include/python3.5/ ;" >> \
 				tools/build/src/user-config.jam; \
@@ -300,20 +347,24 @@ define Build/Compile
 			echo "using python : 2.7 : $(STAGING_DIR_ROOT)/usr/bin/python :	$(STAGING_DIR)/usr/include/python2.7/ ;" >> \
 				tools/build/src/user-config.jam; \
 		) \
-		bjam \
-			'-sBUILD=release <optimization>space <inlining>on <debug-symbols>off' \
+		b2 \
+			$(CONFIGURE_ARGS) \
 			--ignore-site-config \
 			--toolset=gcc-$(ARCH) abi=$(BOOST_ABI) \
 			--disable-long-double \
+			$(if $(CONFIG_boost-variant-release), variant=release,) \
+			$(if $(CONFIG_boost-variant-debug), variant=debug,) \
+			$(if $(CONFIG_boost-variant-profile), variant=profile,) \
 			$(if $(CONFIG_boost-use-name-tags),--layout=tagged,--layout=system) \
-			$(if $(CONFIG_boost-with-debug),--build-type=complete,--build-type=minimal) \
-			$(if $(CONFIG_boost-static-libs),link=static,) \
-			$(if $(CONFIG_boost-runtime-static),runtime-link=static,runtime-link=shared) \
+			$(if $(CONFIG_boost-build-type-complete),--build-type=complete,--build-type=minimal) \
 			$(if $(CONFIG_boost-shared-libs),link=shared,) \
+			$(if $(CONFIG_boost-static-libs),link=static,) \
+			$(if $(CONFIG_boost-static-and-shared-libs),link=static$(comma)shared,) \
 			$(if $(CONFIG_boost-runtime-shared),runtime-link=shared,) \
+			$(if $(CONFIG_boost-runtime-static),runtime-link=static,) \
+			$(if $(CONFIG_boost-runtime-static-and-shared),runtime-link=shared$(comma)static,) \
 			$(if $(CONFIG_boost-single-thread),threading=single,) \
 			threading=multi \
-			$(CONFIGURE_ARGS) \
 			--without-mpi \
 			$(if $(CONFIG_boost-coroutine2),,--without-coroutine2) \
 			$(if $(CONFIG_boost-graph-parallel),,--without-graph_parallel) \
@@ -342,17 +393,17 @@ define Build/InstallDev
 		# copies _all_ header files - independent of <--with-library>-argument above
 
 	$(INSTALL_DIR) $(1)/usr/lib
-	$(CP) -v $(PKG_INSTALL_DIR)/lib/*.a $(1)/usr/lib/ # copies all compiled archive files 	
+	$(CP) -v $(PKG_INSTALL_DIR)/lib/*.a $(1)/usr/lib/ # copies all compiled archive files
 	$(FIND) $(PKG_INSTALL_DIR)/lib/ -name '*.so*' -exec $(CP) {} $(1)/usr/lib/ \; # copies all the shared objects files
 endef
 
 define Host/Install
 	$(INSTALL_DIR) \
-		$(STAGING_DIR_HOST)/bin
+		$(STAGING_DIR)/host/bin
 
 	$(CP) \
-		$(HOST_BUILD_DIR)/tools/build/src/engine/bin.*/bjam \
-		$(STAGING_DIR_HOST)/bin/
+		$(HOST_BUILD_DIR)/tools/build/src/engine/bin.*/b2 \
+		$(STAGING_DIR)/host/bin/
 endef
 
 define Package/boost/Default/install

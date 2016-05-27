@@ -9,13 +9,13 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=LVM2
-PKG_VERSION:=2.02.136
+PKG_VERSION:=2.02.154
 PKG_RELEASE:=1
 PKG_LICENSE:=GPL-2.0 LGPL-2.1
 
 PKG_SOURCE:=$(PKG_NAME).$(PKG_VERSION).tgz
 PKG_SOURCE_URL:=ftp://sources.redhat.com/pub/lvm2/releases
-PKG_MD5SUM:=f1ac794d1cf44e863a7fa614f4c28410
+PKG_MD5SUM:=c6c3724de741ea9910acae3b0669a45f
 PKG_MAINTAINER:=Daniel Golle <daniel@makrotopia.org>
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME).$(PKG_VERSION)
 
@@ -26,7 +26,7 @@ define Package/libdevmapper
   CATEGORY:=Libraries
   TITLE:=The Linux Kernel Device Mapper userspace library
   URL:=http://sourceware.org/dm/
-  DEPENDS:=+kmod-dm +libpthread
+  DEPENDS:=+kmod-dm +libpthread +libuuid
 endef
 
 define Package/libdevmapper/description

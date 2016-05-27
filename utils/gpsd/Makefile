@@ -9,7 +9,7 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=gpsd
 PKG_VERSION:=3.15
-PKG_RELEASE:=1
+PKG_RELEASE:=2
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_URL:=http://download-mirror.savannah.gnu.org/releases/gpsd/
@@ -82,6 +82,9 @@ define Package/libgps/description
   $(call Package/gpsd/Default/description)
   This package contains the libgps library.
 endef
+
+SCONS_VARS += \
+	LINKFLAGS="$(TARGET_LDFLAGS)"
 
 SCONS_OPTIONS += \
 	dbus_export=no \

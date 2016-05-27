@@ -1,21 +1,12 @@
 #!/bin/sh
 # /usr/lib/ddns/dynamic_dns_updater.sh
 #
-# Original written by Eric Paul Bishop, January 2008
 #.Distributed under the terms of the GNU General Public License (GPL) version 2.0
+# Original written by Eric Paul Bishop, January 2008
 # (Loosely) based on the script on the one posted by exobyte in the forums here:
 # http://forum.openwrt.org/viewtopic.php?id=14040
-#
-# extended and partial rewritten in August 2014 by
-#.Christian Schoenebeck <christian dot schoenebeck at gmail dot com>
-# to support:
-# - IPv6 DDNS services
-# - DNS Server to retrieve registered IP including TCP transport (Ticket 7820)
-# - Proxy Server to send out updates
-# - force_interval=0 to run once (Luci Ticket 538)
-# - the usage of BIND's host command instead of BusyBox's nslookup if installed
-# - extended Verbose Mode and log file support for better error detection
-# - wait for interface to fully come up, before the first update is done
+# extended and partial rewritten
+#.2014-2016 Christian Schoenebeck <christian dot schoenebeck at gmail dot com>
 #
 # variables in small chars are read from /etc/config/ddns
 # variables in big chars are defined inside these scripts as global vars
@@ -274,12 +265,15 @@ get_registered_ip REGISTERED_IP "NO_RETRY"
 ERR_LAST=$?
 #     No error    or     No IP set	 otherwise retry
 [ $ERR_LAST -eq 0 -o $ERR_LAST -eq 127 ] || get_registered_ip REGISTERED_IP
+# on IPv6 we use expanded version to be shure when comparing
+[ $use_ipv6 -eq 1 ] && expand_ipv6 "$REGISTERED_IP" REGISTERED_IP
 
 # loop endlessly, checking ip every check_interval and forcing an updating once every force_interval
 write_log 6 "Starting main loop at $(eval $DATE_PROG)"
 while : ; do
 
 	get_local_ip LOCAL_IP		# read local IP
+	[ $use_ipv6 -eq 1 ] && expand_ipv6 "$LOCAL_IP" LOCAL_IP	# on IPv6 we use expanded version
 
 	# prepare update
 	# never updated or forced immediate then NEXT_TIME = 0
@@ -335,6 +329,7 @@ while : ; do
 
 	REGISTERED_IP=""		# clear variable
 	get_registered_ip REGISTERED_IP	# get registered/public IP
+	[ $use_ipv6 -eq 1 ] && expand_ipv6 "$REGISTERED_IP" REGISTERED_IP	# on IPv6 we use expanded version
 
 	# IP's are still different
 	if [ "$LOCAL_IP" != "$REGISTERED_IP" ]; then

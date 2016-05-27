@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2006-2015 OpenWrt.org
+# Copyright (C) 2006-2016 OpenWrt.org
 #
 # This is free software, licensed under the GNU General Public License v2.
 # See /LICENSE for more information.
@@ -13,13 +13,13 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=nmap
-PKG_VERSION:=7.00
+PKG_VERSION:=7.12
 PKG_RELEASE:=1
 PKG_MAINTAINER=Nuno Goncalves <nunojpg@gmail.com>
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.bz2
 PKG_SOURCE_URL:=http://nmap.org/dist/
-PKG_MD5SUM:=6cdf5d03cc3294b99d69dfca83f2f2ee
+PKG_MD5SUM:=0764f4dabe7cccda3c49fc3990b62a8a
 PKG_LICENSE:=GPL-2.0
 PKG_LICENSE_FILES:=COPYING
 
