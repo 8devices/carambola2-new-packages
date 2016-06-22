@@ -1,0 +1,10 @@
+--- a/examples/iio_driver.c
++++ b/examples/iio_driver.c
+@@ -23,6 +23,7 @@
+  */
+ 
+ #include <unistd.h>
++#include <endian.h>
+ #include "mraa/iio.h"
+ 
+ static void
