@@ -52,7 +52,7 @@ CMAKE_OPTIONS=-DBUILDARCH=$(CONFIG_ARCH) \
 define Package/libupm/Default
   SECTION:=libs
   CATEGORY:=Libraries
-  DEPENDS:=+libmraa8 +librt +python +libmodbus +libjpeg
+  DEPENDS:=+libmraa +librt +python +libmodbus +libjpeg
   SUBMENU:=IoT
 endef
 
