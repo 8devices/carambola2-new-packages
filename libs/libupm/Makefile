@@ -26,7 +26,7 @@ include $(INCLUDE_DIR)/package.mk
 include $(INCLUDE_DIR)/cmake.mk
 
 UPM_MODULES:= \
-	a110x ad8232 adafruitms1438 adafruitss adc121c021 adis16448 ads1x15 adxl335 adxl345 adxrs610 am2315 \
+	a110x ad8232 adafruitss adc121c021 adis16448 ads1x15 adxl335 adxl345 adxrs610 am2315 \
 	apa102 apds9002 apds9930 at42qt1070 biss0001 bma220 bmi160 bmp280 bmpx8x bno055 buzzer cjq4435 cwlsxxa \
 	dfrph ds1307 ds1808lc ds18b20 ds2413 ecs1030 enc03r flex \
 	gas gp2y0a grove grovecollision groveehr groveeldriver groveelectromagnet groveemg grovegprs grovegsr grovelinefinder \
@@ -78,6 +78,7 @@ define UpmPackage
 define Package/libupm-$(1)
   $(call Package/libupm/Default)
   TITLE:=Intel IoT sensor library - $(1)
+  DEPENDS+=$(2)
 endef
 
 define Package/libupm-$(1)/install
@@ -90,3 +91,6 @@ $(foreach package, $(UPM_MODULES),			\
 	$(eval $(call UpmPackage,$(package)))		\
 	$(eval $(call BuildPackage,libupm-$(package)))	\
 )
+# Packages that depend on other libupm packages
+$(eval $(call UpmPackage,adafruitms1438,+libupm-pca9685))
+$(eval $(call BuildPackage,libupm-adafruitms1438))
