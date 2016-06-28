@@ -194,7 +194,8 @@ CONFIGURE_ARGS+= \
 	--enable-daemon \
 	--with-nan-emulation \
 	--without-perl-bindings \
-	--without-libudev
+	--without-libudev \
+	--without-java
 
 ifneq ($(CONFIG_PACKAGE_COLLECTD_ENCRYPTED_NETWORK),)
 CONFIGURE_ARGS+= \
