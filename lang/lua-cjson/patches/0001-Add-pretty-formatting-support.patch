@@ -1,0 +1,260 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index c17239b..bc50a17 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -68,7 +68,7 @@ else()
+     set(_lua_module_dir "${_lua_lib_dir}/lua/5.1")
+ endif()
+ 
+-add_library(cjson MODULE lua_cjson.c strbuf.c ${FPCONV_SOURCES})
++add_library(cjson MODULE lua_cjson.c strbuf.c jsonformat.c ${FPCONV_SOURCES})
+ set_target_properties(cjson PROPERTIES PREFIX "")
+ target_link_libraries(cjson ${_MODULE_LINK})
+ install(TARGETS cjson DESTINATION "${_lua_module_dir}")
+diff --git a/jsonformat.c b/jsonformat.c
+new file mode 100644
+index 0000000..b255e57
+--- /dev/null
++++ b/jsonformat.c
+@@ -0,0 +1,134 @@
++/*
++ * Copyright (C) 2013, Krzysztof Kliś <krzysztof.klis@gmail.com>
++ *
++ * This program is free software: you can redistribute it and/or modify
++ * it under the terms of the GNU Lesser General Public License as published by
++ * the Free Software Foundation, either version 3 of the License, or
++ * (at your option) any later version with the following modification:
++ *
++ * As a special exception, the copyright holders of this library give you
++ * permission to link this library with independent modules to produce an
++ * executable, regardless of the license terms of these independent modules,
++ * and to copy and distribute the resulting executable under terms of your choice,
++ * provided that you also meet, for each linked independent module, the terms
++ * and conditions of the license of that module. An independent module is a
++ * module which is not derived from or based on this library. If you modify this
++ * library, you may extend this exception to your version of the library, but
++ * you are not obligated to do so. If you do not wish to do so, delete this
++ * exception statement from your version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU Lesser General Public License for more details.
++ *
++ * You should have received a copy of the GNU Lesser General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ */
++
++#include <stdio.h>
++#include "strbuf.h"
++
++typedef enum {TRUE = 1, FALSE = 0} bool;
++const int INDENT_SPACES = 2;
++
++typedef struct {
++	bool escape;
++	bool intern;
++	bool newline;
++	int level;
++	strbuf_t *buffer;
++} json_pp_t;
++
++static void indent(json_pp_t *pp) {
++	int i;
++
++	strbuf_append_char(pp->buffer, '\n');
++	for (i = 0; i < (pp->level * INDENT_SPACES); i++) {
++		strbuf_append_char(pp->buffer, ' ');
++	}
++}
++
++static void print(json_pp_t *pp, char c) {
++	if (pp->newline) {
++		indent(pp);
++		pp->newline = FALSE;
++	}
++	strbuf_append_char(pp->buffer, c);
++}
++
++static void format(json_pp_t *pp, char c) {
++	if (c == '[' || c == '{') {
++		print(pp, c);
++		pp->level++;
++		pp->newline = TRUE;
++	} else if (c == ']' || c == '}') {
++		if (pp->level > 0) {
++			pp->level--;
++		}
++		indent(pp);
++		strbuf_append_char(pp->buffer, c);
++		pp->newline = TRUE;
++	} else if (c == ',') {
++		strbuf_append_char(pp->buffer, c);
++		pp->newline = TRUE;
++	} else if (c == ':') {
++		strbuf_append_char(pp->buffer, c);
++		strbuf_append_char(pp->buffer, ' ');
++	} else {
++		print(pp, c);
++	}
++}
++
++static void parse(json_pp_t *pp, char c) {
++	/* parse escaped and unescaped quote */
++	if (c == '"' && pp->escape == FALSE) {
++		format(pp, c);
++		pp->intern = (pp->intern == TRUE) ? FALSE : TRUE;
++	} else if (pp->intern == FALSE) {
++		if (c != ' ' && c != '\t') {
++			format(pp, c);
++		}
++	} else {
++		strbuf_append_char(pp->buffer, c);
++	}
++	/* handle backslash escape */
++	if (c == '\\') {
++		pp->escape = (pp->escape == TRUE) ? FALSE : TRUE;
++	} else {
++		pp->escape = FALSE;
++	}
++}
++
++static void init_pretty_printer(json_pp_t *pp, strbuf_t *buffer) {
++	pp->level = 0;
++	pp->escape = FALSE;
++	pp->intern = FALSE;
++	pp->newline = FALSE;
++	pp->buffer = buffer;
++}
++
++void json_beautify(strbuf_t *encode_buf) {
++	strbuf_t local_encode_buf;
++	char *json, *c;
++	int len;
++	json_pp_t pp;
++
++	strbuf_init(&local_encode_buf, 0);
++	init_pretty_printer(&pp, &local_encode_buf);
++
++	json = strbuf_string(encode_buf, &len);
++	c = json;
++	while (len != 0) {
++		if (*c != '\r' && *c != '\n') {
++			parse(&pp, *c);
++		}
++		c++;
++		len--;
++	}
++	json = strbuf_string(&local_encode_buf, &len);
++	strbuf_reset(encode_buf);
++	strbuf_append_mem(encode_buf, json, len);
++	strbuf_free(&local_encode_buf);
++	return;
++}
+diff --git a/jsonformat.h b/jsonformat.h
+new file mode 100644
+index 0000000..15a0e53
+--- /dev/null
++++ b/jsonformat.h
+@@ -0,0 +1,8 @@
++#ifndef JSONFORMAT_H
++#define JSONFORMAT_H
++
++#include "strbuf.h"
++
++void json_beautify(strbuf_t *encode_buf);
++
++#endif /* JSONFORMAT_H */
+diff --git a/lua_cjson.c b/lua_cjson.c
+index f91b7e3..6ff9967 100644
+--- a/lua_cjson.c
++++ b/lua_cjson.c
+@@ -45,6 +45,7 @@
+ 
+ #include "strbuf.h"
+ #include "fpconv.h"
++#include "jsonformat.h"
+ 
+ #ifndef CJSON_MODNAME
+ #define CJSON_MODNAME   "cjson"
+@@ -68,6 +69,7 @@
+ #define DEFAULT_DECODE_INVALID_NUMBERS 1
+ #define DEFAULT_ENCODE_KEEP_BUFFER 1
+ #define DEFAULT_ENCODE_NUMBER_PRECISION 14
++#define DEFAULT_ENCODE_PRETTY_FORMAT 0
+ 
+ #ifdef DISABLE_INVALID_NUMBERS
+ #undef DEFAULT_DECODE_INVALID_NUMBERS
+@@ -124,6 +126,7 @@ typedef struct {
+     int encode_invalid_numbers;     /* 2 => Encode as "null" */
+     int encode_number_precision;
+     int encode_keep_buffer;
++    int encode_pretty_format;
+ 
+     int decode_invalid_numbers;
+     int decode_max_depth;
+@@ -356,6 +359,17 @@ static int json_cfg_decode_invalid_numbers(lua_State *l)
+     return 1;
+ }
+ 
++static int json_cfg_encode_pretty_format(lua_State *l)
++{
++    json_config_t *cfg = json_arg_init(l, 1);
++
++    json_enum_option(l, 1, &cfg->encode_pretty_format, NULL, 1);
++
++    json_verify_invalid_number_setting(l, &cfg->encode_pretty_format);
++
++    return 1;
++}
++
+ static int json_destroy_config(lua_State *l)
+ {
+     json_config_t *cfg;
+@@ -390,6 +404,7 @@ static void json_create_config(lua_State *l)
+     cfg->decode_invalid_numbers = DEFAULT_DECODE_INVALID_NUMBERS;
+     cfg->encode_keep_buffer = DEFAULT_ENCODE_KEEP_BUFFER;
+     cfg->encode_number_precision = DEFAULT_ENCODE_NUMBER_PRECISION;
++    cfg->encode_pretty_format = DEFAULT_ENCODE_PRETTY_FORMAT;
+ 
+ #if DEFAULT_ENCODE_KEEP_BUFFER > 0
+     strbuf_init(&cfg->encode_buf, 0);
+@@ -719,6 +734,9 @@ static int json_encode(lua_State *l)
+     }
+ 
+     json_append_data(l, cfg, 0, encode_buf);
++    if (cfg->encode_pretty_format) {
++        json_beautify(encode_buf);
++    }
+     json = strbuf_string(encode_buf, &len);
+ 
+     lua_pushlstring(l, json, len);
+@@ -1344,6 +1362,7 @@ static int lua_cjson_new(lua_State *l)
+     luaL_Reg reg[] = {
+         { "encode", json_encode },
+         { "decode", json_decode },
++        { "encode_pretty_format", json_cfg_encode_pretty_format },
+         { "encode_sparse_array", json_cfg_encode_sparse_array },
+         { "encode_max_depth", json_cfg_encode_max_depth },
+         { "decode_max_depth", json_cfg_decode_max_depth },
+diff --git a/strbuf.h b/strbuf.h
+index d861108..11855fc 100644
+--- a/strbuf.h
++++ b/strbuf.h
+@@ -21,6 +21,8 @@
+  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+  */
++#ifndef STRBUF_H
++#define STRBUF_H
+ 
+ #include <stdlib.h>
+ #include <stdarg.h>
+@@ -150,5 +152,7 @@ static inline char *strbuf_string(strbuf_t *s, int *len)
+     return s->buf;
+ }
+ 
++#endif /* STRBUF_H */
++
+ /* vi:ai et sw=4 ts=4:
+  */
