@@ -1,0 +1,449 @@
+diff --git a/src/luasocket.c b/src/luasocket.c
+index 85d41a6..432f9b3 100644
+--- a/src/luasocket.c
++++ b/src/luasocket.c
+@@ -31,6 +31,7 @@
+ #include "tcp.h"
+ #include "udp.h"
+ #include "select.h"
++#include "sockfd.h"
+ #include "if.h"
+ 
+ /*-------------------------------------------------------------------------*\
+@@ -52,6 +53,7 @@ static const luaL_Reg mod[] = {
+     {"tcp", tcp_open},
+     {"udp", udp_open},
+     {"select", select_open},
++    {"socket", sockfd_open},
+     {"iface", if_open},
+     {NULL, NULL}
+ };
+diff --git a/src/makefile b/src/makefile
+index 09d4882..2e66724 100644
+--- a/src/makefile
++++ b/src/makefile
+@@ -266,6 +266,7 @@ SOCKET_OBJS= \
+ 	$(SOCKET) \
+ 	except.$(O) \
+ 	select.$(O) \
++	sockfd.$(O) \
+ 	tcp.$(O) \
+ 	udp.$(O)
+ 
+@@ -406,5 +407,6 @@ udp.$(O): udp.c auxiliar.h socket.h io.h timeout.h usocket.h \
+ 	inet.h options.h udp.h
+ unix.$(O): unix.c auxiliar.h socket.h io.h timeout.h usocket.h \
+ 	options.h unix.h buffer.h
++sockfd.$(O): sockfd.c sockfd.h auxiliar.h socket.h
+ usocket.$(O): usocket.c socket.h io.h timeout.h usocket.h
+ wsocket.$(O): wsocket.c socket.h io.h timeout.h usocket.h
+diff --git a/src/serial.c b/src/serial.c
+index 583d4e5..4e03eac 100644
+--- a/src/serial.c
++++ b/src/serial.c
+@@ -9,6 +9,7 @@
+ 
+ #include "auxiliar.h"
+ #include "socket.h"
++#include "sockfd.h"
+ #include "options.h"
+ #include "unix.h"
+ #include <sys/un.h> 
+@@ -37,6 +38,9 @@ static int meth_setfd(lua_State *L);
+ static int meth_dirty(lua_State *L);
+ static int meth_getstats(lua_State *L);
+ static int meth_setstats(lua_State *L);
++static int meth_setcloseonexec(lua_State *L);
++static int meth_setnonblocking(lua_State *L);
++static int meth_setblocking(lua_State *L);
+ 
+ /* serial object methods */
+ static luaL_Reg serial_methods[] = {
+@@ -51,6 +55,9 @@ static luaL_Reg serial_methods[] = {
+     {"send",        meth_send},
+     {"setfd",       meth_setfd},
+     {"settimeout",  meth_settimeout},
++    {"setcloseonexec", meth_setcloseonexec},
++    {"setnonblocking", meth_setnonblocking},
++    {"setblocking",    meth_setblocking},
+     {NULL,          NULL}
+ };
+ 
+@@ -150,6 +157,27 @@ static int meth_settimeout(lua_State *L) {
+     return timeout_meth_settimeout(L, &un->tm);
+ }
+ 
++/*-------------------------------------------------------------------------*\
++* Just call socket FD methods
++\*-------------------------------------------------------------------------*/
++static int meth_setcloseonexec(lua_State *L)
++{
++    p_unix un = (p_unix) auxiliar_checkgroup(L, "serial{any}", 1);
++    return sockfd_meth_setcloseonexec(L, &un->sock);
++}
++
++static int meth_setnonblocking(lua_State *L)
++{
++    p_unix un = (p_unix) auxiliar_checkgroup(L, "serial{any}", 1);
++    return sockfd_meth_setnonblocking(L, &un->sock);
++}
++
++static int meth_setblocking(lua_State *L)
++{
++    p_unix un = (p_unix) auxiliar_checkgroup(L, "serial{any}", 1);
++    return sockfd_meth_setblocking(L, &un->sock);
++}
++
+ /*=========================================================================*\
+ * Library functions
+ \*=========================================================================*/
+diff --git a/src/socket.h b/src/socket.h
+index 63573de..732fe15 100644
+--- a/src/socket.h
++++ b/src/socket.h
+@@ -44,6 +44,7 @@ int socket_sendto(p_socket ps, const char *data, size_t count,
+ int socket_recvfrom(p_socket ps, char *data, size_t count, 
+         size_t *got, SA *addr, socklen_t *addr_len, p_timeout tm);
+ 
++void socket_setcloexec(p_socket ps);
+ void socket_setnonblocking(p_socket ps);
+ void socket_setblocking(p_socket ps);
+ 
+diff --git a/src/sockfd.c b/src/sockfd.c
+new file mode 100644
+index 0000000..d74a721
+--- /dev/null
++++ b/src/sockfd.c
+@@ -0,0 +1,96 @@
++
++#include "lua.h"
++
++#include "auxiliar.h"
++#include "socket.h"
++#include "sockfd.h"
++
++static int sockfd_global_setcloseonexec(lua_State *L);
++static int sockfd_global_setnonblocking(lua_State *L);
++static int sockfd_global_setblocking(lua_State *L);
++
++/* functions in library namespace */
++static luaL_Reg func[] = {
++    {"setcloseonexec", sockfd_global_setcloseonexec},
++    {"setnonblocking", sockfd_global_setnonblocking},
++    {"setblocking", sockfd_global_setblocking},
++    {NULL, NULL}
++};
++
++/*-------------------------------------------------------------------------*\
++* Initializes module
++\*-------------------------------------------------------------------------*/
++int sockfd_open(lua_State *L)
++{
++    /* define library functions */
++#if LUA_VERSION_NUM > 501 && !defined(LUA_COMPAT_MODULE)
++    luaL_setfuncs(L, func, 0);
++#else
++    luaL_openlib(L, NULL, func, 0);
++#endif
++    return 0;
++}
++
++static p_socket sockfd_checksocket(lua_State *L)
++{
++    p_socket sock;
++
++    /* XXX: FD operation applies for all socket types.
++     * Don't know other easy way to retrieve userdata.
++     * This approach relies socket to be first item in
++     * proto structure (i.e. tcp_p, udp_p, etc.). */
++
++    sock = (p_socket) auxiliar_getgroupudata(L, "tcp{any}", 1);
++    if (sock) return sock;
++    sock = (p_socket) auxiliar_getgroupudata(L, "udp{any}", 1);
++    if (sock) return sock;
++    sock = (p_socket) auxiliar_getgroupudata(L, "unix{any}", 1);
++    if (sock) return sock;
++    sock = (p_socket) auxiliar_getgroupudata(L, "serial{any}", 1);
++    if (sock) return sock;
++
++    luaL_argerror(L, 1, "socket expected");
++    return NULL;
++}
++
++static int sockfd_global_setcloseonexec(lua_State *L)
++{
++    p_socket sock = sockfd_checksocket(L);
++    socket_setcloexec(sock);
++    return 0;
++}
++
++static int sockfd_global_setnonblocking(lua_State *L)
++{
++    p_socket sock = sockfd_checksocket(L);
++    socket_setnonblocking(sock);
++    return 0;
++}
++
++static int sockfd_global_setblocking(lua_State *L)
++{
++    p_socket sock = sockfd_checksocket(L);
++    socket_setblocking(sock);
++    return 0;
++}
++
++int sockfd_meth_setcloseonexec(lua_State *L, p_socket sock)
++{
++    socket_setcloexec(sock);
++    lua_pushnumber(L, 1);
++    return 1;
++}
++
++int sockfd_meth_setnonblocking(lua_State *L, p_socket sock)
++{
++    socket_setnonblocking(sock);
++    lua_pushnumber(L, 1);
++    return 1;
++}
++
++int sockfd_meth_setblocking(lua_State *L, p_socket sock)
++{
++    socket_setblocking(sock);
++    lua_pushnumber(L, 1);
++    return 1;
++}
+diff --git a/src/sockfd.h b/src/sockfd.h
+new file mode 100644
+index 0000000..546492c
+--- /dev/null
++++ b/src/sockfd.h
+@@ -0,0 +1,13 @@
++#ifndef SOCK_H
++#define SOCK_H
++
++#include "lua.h"
++#include "socket.h"
++
++int sockfd_open(lua_State *L);
++
++int sockfd_meth_setcloseonexec(lua_State *L, p_socket sock);
++int sockfd_meth_setnonblocking(lua_State *L, p_socket sock);
++int sockfd_meth_setblocking(lua_State *L, p_socket sock);
++
++#endif /* SOCK_H */
+diff --git a/src/tcp.c b/src/tcp.c
+index 6594bda..190804b 100644
+--- a/src/tcp.c
++++ b/src/tcp.c
+@@ -9,6 +9,7 @@
+ 
+ #include "auxiliar.h"
+ #include "socket.h"
++#include "sockfd.h"
+ #include "inet.h"
+ #include "options.h"
+ #include "tcp.h"
+@@ -38,6 +39,9 @@ static int meth_settimeout(lua_State *L);
+ static int meth_getfd(lua_State *L);
+ static int meth_setfd(lua_State *L);
+ static int meth_dirty(lua_State *L);
++static int meth_setcloseonexec(lua_State *L);
++static int meth_setnonblocking(lua_State *L);
++static int meth_setblocking(lua_State *L);
+ 
+ /* tcp object methods */
+ static luaL_Reg tcp_methods[] = {
+@@ -64,6 +68,9 @@ static luaL_Reg tcp_methods[] = {
+     {"setsockname", meth_bind},
+     {"settimeout",  meth_settimeout},
+     {"shutdown",    meth_shutdown},
++    {"setcloseonexec", meth_setcloseonexec},
++    {"setnonblocking", meth_setnonblocking},
++    {"setblocking",    meth_setblocking},
+     {NULL,          NULL}
+ };
+ 
+@@ -348,6 +355,27 @@ static int meth_settimeout(lua_State *L)
+     return timeout_meth_settimeout(L, &tcp->tm);
+ }
+ 
++/*-------------------------------------------------------------------------*\
++* Just call socket FD methods
++\*-------------------------------------------------------------------------*/
++static int meth_setcloseonexec(lua_State *L)
++{
++    p_tcp tcp = (p_tcp) auxiliar_checkgroup(L, "tcp{any}", 1);
++    return sockfd_meth_setcloseonexec(L, &tcp->sock);
++}
++
++static int meth_setnonblocking(lua_State *L)
++{
++    p_tcp tcp = (p_tcp) auxiliar_checkgroup(L, "tcp{any}", 1);
++    return sockfd_meth_setnonblocking(L, &tcp->sock);
++}
++
++static int meth_setblocking(lua_State *L)
++{
++    p_tcp tcp = (p_tcp) auxiliar_checkgroup(L, "tcp{any}", 1);
++    return sockfd_meth_setblocking(L, &tcp->sock);
++}
++
+ /*=========================================================================*\
+ * Library functions
+ \*=========================================================================*/
+diff --git a/src/udp.c b/src/udp.c
+index a9f2393..49f0ad5 100644
+--- a/src/udp.c
++++ b/src/udp.c
+@@ -10,6 +10,7 @@
+ 
+ #include "auxiliar.h"
+ #include "socket.h"
++#include "sockfd.h"
+ #include "inet.h"
+ #include "options.h"
+ #include "udp.h"
+@@ -43,6 +44,9 @@ static int meth_settimeout(lua_State *L);
+ static int meth_getfd(lua_State *L);
+ static int meth_setfd(lua_State *L);
+ static int meth_dirty(lua_State *L);
++static int meth_setcloseonexec(lua_State *L);
++static int meth_setnonblocking(lua_State *L);
++static int meth_setblocking(lua_State *L);
+ 
+ /* udp object methods */
+ static luaL_Reg udp_methods[] = {
+@@ -64,6 +68,9 @@ static luaL_Reg udp_methods[] = {
+     {"setpeername", meth_setpeername},
+     {"setsockname", meth_setsockname},
+     {"settimeout",  meth_settimeout},
++    {"setcloseonexec", meth_setcloseonexec},
++    {"setnonblocking", meth_setnonblocking},
++    {"setblocking",    meth_setblocking},
+     {NULL,          NULL}
+ };
+ 
+@@ -400,6 +407,27 @@ static int meth_setsockname(lua_State *L) {
+     return 1;
+ }
+ 
++/*-------------------------------------------------------------------------*\
++* Just call socket FD methods
++\*-------------------------------------------------------------------------*/
++static int meth_setcloseonexec(lua_State *L)
++{
++    p_udp udp = (p_udp) auxiliar_checkgroup(L, "udp{any}", 1);
++    return sockfd_meth_setcloseonexec(L, &udp->sock);
++}
++
++static int meth_setnonblocking(lua_State *L)
++{
++    p_udp udp = (p_udp) auxiliar_checkgroup(L, "udp{any}", 1);
++    return sockfd_meth_setnonblocking(L, &udp->sock);
++}
++
++static int meth_setblocking(lua_State *L)
++{
++    p_udp udp = (p_udp) auxiliar_checkgroup(L, "udp{any}", 1);
++    return sockfd_meth_setblocking(L, &udp->sock);
++}
++
+ /*=========================================================================*\
+ * Library functions
+ \*=========================================================================*/
+diff --git a/src/unix.c b/src/unix.c
+index 91aaaf8..0847792 100644
+--- a/src/unix.c
++++ b/src/unix.c
+@@ -9,6 +9,7 @@
+ 
+ #include "auxiliar.h"
+ #include "socket.h"
++#include "sockfd.h"
+ #include "options.h"
+ #include "unix.h"
+ #include <sys/un.h> 
+@@ -32,6 +33,9 @@ static int meth_setfd(lua_State *L);
+ static int meth_dirty(lua_State *L);
+ static int meth_getstats(lua_State *L);
+ static int meth_setstats(lua_State *L);
++static int meth_setcloseonexec(lua_State *L);
++static int meth_setnonblocking(lua_State *L);
++static int meth_setblocking(lua_State *L);
+ 
+ static const char *unix_tryconnect(p_unix un, const char *path);
+ static const char *unix_trybind(p_unix un, const char *path);
+@@ -57,6 +61,9 @@ static luaL_Reg unix_methods[] = {
+     {"setsockname", meth_bind},
+     {"settimeout",  meth_settimeout},
+     {"shutdown",    meth_shutdown},
++    {"setcloseonexec", meth_setcloseonexec},
++    {"setnonblocking", meth_setnonblocking},
++    {"setblocking",    meth_setblocking},
+     {NULL,          NULL}
+ };
+ 
+@@ -315,6 +322,27 @@ static int meth_settimeout(lua_State *L) {
+     return timeout_meth_settimeout(L, &un->tm);
+ }
+ 
++/*-------------------------------------------------------------------------*\
++* Just call socket FD methods
++\*-------------------------------------------------------------------------*/
++static int meth_setcloseonexec(lua_State *L)
++{
++    p_unix un = (p_unix) auxiliar_checkgroup(L, "unix{any}", 1);
++    return sockfd_meth_setcloseonexec(L, &un->sock);
++}
++
++static int meth_setnonblocking(lua_State *L)
++{
++    p_unix un = (p_unix) auxiliar_checkgroup(L, "unix{any}", 1);
++    return sockfd_meth_setnonblocking(L, &un->sock);
++}
++
++static int meth_setblocking(lua_State *L)
++{
++    p_unix un = (p_unix) auxiliar_checkgroup(L, "unix{any}", 1);
++    return sockfd_meth_setblocking(L, &un->sock);
++}
++
+ /*=========================================================================*\
+ * Library functions
+ \*=========================================================================*/
+diff --git a/src/usocket.c b/src/usocket.c
+index 096ecd0..16b0d8a 100644
+--- a/src/usocket.c
++++ b/src/usocket.c
+@@ -355,6 +355,15 @@ int socket_read(p_socket ps, char *data, size_t count, size_t *got, p_timeout tm
+     return IO_UNKNOWN;
+ }
+ 
++/*-------------------------------------------------------------------------*\
++ * Set socket to close on exec
++\*-------------------------------------------------------------------------*/
++void socket_setcloexec(p_socket ps) {
++    int flags = fcntl(*ps, F_GETFD);
++    flags |= FD_CLOEXEC;
++    fcntl(*ps, F_SETFD, flags);
++}
++
+ /*-------------------------------------------------------------------------*\
+ * Put socket into blocking mode
+ \*-------------------------------------------------------------------------*/
+diff --git a/src/wsocket.c b/src/wsocket.c
+index b4a4384..526aecd 100644
+--- a/src/wsocket.c
++++ b/src/wsocket.c
+@@ -293,6 +293,12 @@ int socket_recvfrom(p_socket ps, char *data, size_t count, size_t *got,
+     }
+ }
+ 
++/*-------------------------------------------------------------------------*\
++ * Set socket to close on exec
++\*-------------------------------------------------------------------------*/
++void socket_setcloexec(p_socket ps) {
++}
++
+ /*-------------------------------------------------------------------------*\
+ * Put socket into blocking mode
+ \*-------------------------------------------------------------------------*/
