@@ -9,17 +9,18 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=luasec
 PKG_VERSION:=0.7
-PKG_RELEASE:=1
+PKG_RELEASE:=3
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
-PKG_SOURCE_URL:=https://github.com/brunoos/luasec/archive/
-PKG_MD5SUM:=9fda9db026f05fc8f2035947ff310f74
+PKG_SOURCE_URL:=https://codeload.github.com/brunoos/luasec/tar.gz/luasec-$(PKG_VERSION)?
+PKG_HASH:=2176e95b1d2a72a3235ede5d2aa9838050feee55dade8fdbde4be7fdc66f3a31
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-$(PKG_NAME)-$(PKG_VERSION)
 
 MAINTAINER:=W. Michael Petullo <mike@flyn.org>
 PKG_LICENSE:=MIT
 PKG_LICENSE_FILES:=LICENSE
 
+PKG_BUILD_PARALLEL:=1
 PKG_INSTALL:=1
 
 include $(INCLUDE_DIR)/package.mk
@@ -40,11 +41,15 @@ endef
 define Build/Configure
 endef
 
+TARGET_CFLAGS += $(FPIC)
+TARGET_LDFLAGS += $(FPIC)
+
 MAKE_FLAGS += \
-	INCDIR="$(TARGET_CPPFLAGS) -I." \
-	LIBDIR="$(TARGET_LDFLAGS) -L./luasocket" \
-	LUACPATH="/usr/lib/lua" \
-	LUAPATH="/usr/lib/lua"
+	LD="$(TARGET_CC)" \
+	INC_PATH="" \
+	LIB_PATH="" \
+	LUACPATH="$(PKG_INSTALL_DIR)/usr/lib/lua" \
+	LUAPATH="$(PKG_INSTALL_DIR)/usr/lib/lua"
 
 define Build/Compile
 $(call Build/Compile/Default,linux)
